@@ -39,7 +39,6 @@ const PublicChat = ({ user, darkMode, appId = "default-app-id" }) => {
         photoURL: user.photoURL || "https://placehold.co/40x40/4F46E5/FFFFFF?text=U",
       });
       setMessage('');
-      setMessage(''); // This was missing
     } catch (err) {
       console.error("Error sending message:", err);
     }
