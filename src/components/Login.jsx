@@ -1,55 +1,59 @@
-import React from 'react';
-import { auth, googleProvider } from '../firebase.js';
-import { signInWithPopup } from 'firebase/auth';
+// login.jsx
+import React from "react";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "./firebase";
 
 const Login = ({ darkMode }) => {
-  const signInWithGoogle = async () => {
+  const handleGoogleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
-      console.error('Error signing in:', error);
+      console.error("Google Sign-In Error:", error);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        backgroundImage: darkMode ? 'radial-gradient(circle at center, rgba(16, 24, 40, 0.9), rgba(0, 0, 0, 0.9))' : 'none',
-        backgroundColor: darkMode ? '#0F172A' : '#F8FAFC'
-      }}>
-      <div className={`max-w-md w-full p-8 rounded-xl border-2 border-indigo-500/50 backdrop-blur-sm 
-        shadow-3xl transition-all duration-500 
-        ${darkMode ? 'bg-gray-900/80 shadow-indigo-500/30' : 'bg-white/90 shadow-gray-400/50'}`}>
+    <div className="flex items-center justify-center min-h-[70vh] px-4">
+      <div
+        className={`max-w-sm w-full p-8 rounded-xl border transition-all duration-300 font-mono shadow-lg
+          ${
+            darkMode
+              ? "bg-gray-900 border-indigo-500/50 text-gray-200"
+              : "bg-white border-indigo-400 text-gray-800"
+          }`}
+      >
+        <h2
+          className={`text-3xl font-extrabold text-center mb-6 ${
+            darkMode ? "text-yellow-400" : "text-indigo-600"
+          }`}
+        >
+          WUKONG CHAT
+        </h2>
 
-        <div className="text-center">
-          <h2 className={`text-4xl font-extrabold tracking-widest mb-2 ${
-            darkMode ? 'text-yellow-400' : 'text-indigo-600'
-          } font-mono`}>
-            WUKONG CHAT
-          </h2>
-          <p className={`mb-8 text-lg font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-            ACCESS PROTOCOL: REQUIRED
-          </p>
+        <button
+          onClick={handleGoogleLogin}
+          className={`w-full flex items-center justify-center space-x-3 py-3 px-4 font-semibold rounded-lg border transition-all duration-300
+            ${
+              darkMode
+                ? "bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-500"
+                : "bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-700"
+            }`}
+        >
+          <img
+            src="https://developers.google.com/identity/images/g-logo.png"
+            alt="Google"
+            className="w-5 h-5 bg-white rounded-sm p-0.5"
+          />
+          <span>Sign in with Google</span>
+        </button>
 
-          <button
-            onClick={signInWithGoogle}
-            className={`w-full font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] 
-              flex items-center justify-center space-x-3 text-lg 
-              ${darkMode
-                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/50 border border-indigo-400'
-                : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-400/50'
-              }`}
-          >
-            <span>
-              INITIATE_LOGIN
-            </span>
-          </button>
-          <p className={`mt-6 text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'
-            }`}>
-            <span className="font-mono text-yellow-400 mr-1">//</span> Secure Connection via Firebase Auth
-          </p>
-        </div>
+        <p
+          className={`mt-4 text-center text-sm ${
+            darkMode ? "text-gray-500" : "text-gray-400"
+          }`}
+        >
+          Secure connection via Firebase Auth
+        </p>
       </div>
     </div>
   );
