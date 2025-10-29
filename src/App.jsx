@@ -83,38 +83,28 @@ const App = () => {
 
   return (
     // Global container: Set dark background for full screen
-    <div className={`min-h-screen transition-colors duration-500 ${
-      darkMode 
-        ? 'bg-gray-950 text-white' // Deeper background for cyberpunk feel
-        : 'bg-gray-50 text-gray-900'
-    } font-mono`}>
-      <div className="container mx-auto px-4 py-8">
+    <div className="app-container">
+      <div className="container-layout">
         
         {/* Header: Styled to look sharp and futuristic */}
-        <header className="flex justify-between items-center mb-10 pb-4 border-b border-dashed border-indigo-500/50">
-          <h1 className={`text-3xl lg:text-4xl font-extrabold tracking-widest ${
-            darkMode ? 'text-yellow-400' : 'text-indigo-600'
-          } transition-colors duration-300`}>
+        <header className="header">
+          <h1>
             WUKONG CHAT
           </h1>
-          <div className="flex items-center space-x-4">
+          <div className="header-controls">
             <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
             {user && (
               <button
                 onClick={handleSignOut}
-                className={`px-3 py-1 text-sm font-medium rounded-full border border-current transition-all duration-300 ${
-                    darkMode 
-                        ? 'text-red-400 border-red-400 hover:bg-red-400 hover:text-gray-900' 
-                        : 'text-red-500 border-red-500 hover:bg-red-500 hover:text-white'
-                }`}
+                className="btn btn-logout"
               >
-                <LogOut className="w-4 h-4 inline mr-1 -mt-0.5" /> LOG OUT
+                <LogOut style={{width: '1em', height: '1em', marginRight: '0.5em'}} /> LOG OUT
               </button>
             )}
           </div>
         </header>
 
-        {/* Content based on Auth State */}
+        {/* Content based on Auth State - takes remaining height */}
         {user ? (
           <ChatRoom user={user} darkMode={darkMode} />
         ) : (

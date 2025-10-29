@@ -32,30 +32,24 @@ const ChatRoom = ({ user, darkMode }) => {
   const TabButton = ({ tab, icon: Icon, label }) => (
     <button
       onClick={() => setActiveTab(tab)}
-      className={`px-4 py-2 font-bold flex items-center space-x-2 transition-all duration-200 border-b-2 font-mono text-sm
-        ${activeTab === tab
-          ? 'text-yellow-400 border-yellow-400 bg-indigo-600/20'
-          : darkMode
-            ? 'text-gray-400 border-transparent hover:text-yellow-500/70 hover:bg-gray-800'
-            : 'text-gray-600 border-transparent hover:text-indigo-600 hover:bg-gray-200'
-        }`}
+      className={`tab-button ${activeTab === tab ? 'active' : ''}`}
     >
-      <Icon className="w-4 h-4" />
+      <Icon style={{width: '1em', height: '1em'}} />
       <span>{label}</span>
     </button>
   );
 
   return (
-    <div className={`flex flex-col rounded-xl shadow-2xl overflow-hidden transition-colors duration-500 border-2 ${darkMode ? 'shadow-indigo-500/30 border-indigo-500/50' : 'shadow-gray-400/50 border-gray-200'}`} style={{ height: '75vh' }}>
+    <div className="main-content">
       
       {/* Tab Header */}
-      <div className={`flex border-b border-dashed ${darkMode ? 'border-indigo-500/50 bg-gray-900' : 'border-gray-200 bg-white'}`}>
+      <div style={{display: 'flex', borderBottom: '2px dashed var(--border-color)', backgroundColor: 'var(--bg-dark)'}}>
         <TabButton tab="public" icon={MessageSquare} label="Public Chat" />
         <TabButton tab="dm" icon={Users} label="Direct Messages" />
       </div>
 
       {/* Chat Content */}
-      <div className="flex-1 overflow-hidden">
+      <div style={{flex: 1, overflow: 'hidden'}}>
         {activeTab === 'public' && <PublicChat user={user} darkMode={darkMode} />}
         {activeTab === 'dm' && <DirectMessages user={user} darkMode={darkMode} />}
       </div>
