@@ -49,7 +49,7 @@ const PublicChat = ({ user, darkMode }) => {
                 text: newMessage,
                 timestamp: serverTimestamp(),
                 user: user.displayName,
-                userId: user.ud,
+                userId: user.uid,
                 userPhoto: user.photoURL
             });
             setNewMessage('');
@@ -59,7 +59,7 @@ const PublicChat = ({ user, darkMode }) => {
     };
 
     return ( 
-        <div className="h-full flex-col">
+        <div className="h-full flex flex-col">
             {/* Message List */}
             <div className={`flex-1 overflow-y-auto p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} space-y-4 `}>
                 {messages.map((message) => ( 
@@ -72,12 +72,12 @@ const PublicChat = ({ user, darkMode }) => {
                                 </div>
                             )}
 
-                                <p className="break-words">{message.text}</p>
-                                <span className={'text-xs block mt-1 ${message.userId === user.uid ? 'text-gray-300' : 'text-gray-500'}'}>
-                   {message.timestamp?.toDate().toLocaleTimeString()}
-              </span>
-            </div>
-          </div>
+                            <p className="break-words">{message.text}</p>
+                            <span className={`text-xs block mt-1 ${message.userId === user.uid ? 'text-gray-300' : 'text-gray-500'}`}>
+                                {message.timestamp?.toDate().toLocaleTimeString()}
+                            </span>
+                        </div>
+                    </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
