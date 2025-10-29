@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Login from './components/Login.jsx'; // Ensure this file is renamed
 import ChatRoom from './components/ChatRoom.jsx'; // Ensure this file is renamed
 import './index.css'; // Import main CSS file
@@ -18,6 +18,14 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
+  const toggleDarkMode = () => {
+    setDarkMode(prevMode => !prevMode);
+  };
+
+  const handleSignOut = () => {
+    signOut(auth).catch(error => console.error('Sign out error', error));
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-screen text-white">Loading...</div>;
   }
@@ -25,7 +33,14 @@ const App = () => {
   return (
     <div className={darkMode ? 'dark' : ''}>
       <main className="p-4">
-        {user ? <ChatRoom user={user} darkMode={darkMode} /> : <Login darkMode={darkMode} />}
+        {user ? (
+          <ChatRoom
+            user={user}
+            darkMode={darkMode}
+            toggleDarkMode={toggleDarkMode}
+            handleSignOut={handleSignOut}
+          />
+        ) : <Login darkMode={darkMode} />}
       </main>
     </div>
   );
