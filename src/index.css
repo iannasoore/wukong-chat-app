@@ -1,5 +1,42 @@
+/* File: ./src/index.css */
+
+/* 1. Tailwind CSS Directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body { @apply bg-gray-100 dark:bg-gray-900 transition-colors; }
+/* 2. Custom Font Import (Space Mono for the terminal feel) */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+
+/* 3. Global Base Styles for Cyberpunk Theme */
+
+body {
+    /* Apply custom font-mono from tailwind.config.js */
+    @apply font-mono; 
+    
+    /* Apply a deep, theme-specific dark background (cyb-dark) for full immersion */
+    @apply bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white; 
+    
+    /* Ensure color changes are smooth */
+    @apply transition-colors duration-500 ease-in-out;
+}
+
+/* Optional: Scrollbar Styling for a more modern, dark look */
+/* If you want to style the scrollbar (browser specific) */
+.dark ::-webkit-scrollbar {
+    width: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: #1F2937; /* cyb-medium */
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #4F46E5; /* cyb-primary */
+    border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #6366F1;
+}

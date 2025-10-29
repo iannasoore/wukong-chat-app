@@ -1,6 +1,11 @@
 // File: src/components/PublicChat.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import { db } from '../firebase';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  db,
+  getPublicCollectionPath,
+  PUBLIC_COLLECTION_NAME,
+  getUserColor
+} from '../firebase.js';
 import {
   collection,
   addDoc,
@@ -19,6 +24,8 @@ const PublicChat = ({ user, darkMode }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const publicMessagesRef = useMemo(() => collection(db, getPublicCollectionPath(PUBLIC_COLLECTION_NAME)), []);
+
   useEffect(() => {
     const q = query(
       collection(db, 'public-messages'),
@@ -31,10 +38,12 @@ const PublicChat = ({ user, darkMode }) => {
         messagesData.push({ id: doc.id, ...doc.data() });
       });
       setMessages(messagesData);
+    }, (error) => {
+      console.error("Error fetching public messages:", error);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [publicMessagesRef]);
 
   useEffect(() => {
     scrollToBottom();
@@ -45,7 +54,7 @@ const PublicChat = ({ user, darkMode }) => {
     if (newMessage.trim() === '') return;
 
     try {
-      await addDoc(collection(db, 'public-messages'), {
+      await addDoc(publicMessagesRef, {
         text: newMessage,
         timestamp: serverTimestamp(),
         user: user.displayName,
@@ -55,23 +64,8 @@ const PublicChat = ({ user, darkMode }) => {
       });
       setNewMessage('');
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error sending public message:', error);
     }
-  };
-
-  // Function to assign a unique color per user ID for their name
-  const getUserColor = (userId) => {
-    const colors = [
-        'text-yellow-400',
-        'text-cyan-400',
-        'text-green-400',
-        'text-red-400',
-        'text-pink-400',
-        'text-orange-400'
-    ];
-    // Simple hash to pick a color
-    const hash = userId.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
-    return colors[hash % colors.length];
   };
 
 
@@ -112,7 +106,7 @@ const PublicChat = ({ user, darkMode }) => {
                     {message.userId !== user.uid && (
                         <div className="flex items-center mb-1">
                         <img
-                            src={message.userPhoto || '/default-avatar.png'}
+                            src={message.userPhoto || 'https://placehold.co/24x24/374151/ffffff?text=U'}
                             alt={message.user}
                             className="w-6 h-6 rounded-full mr-2 ring-1 ring-offset-2 ring-offset-gray-700 ring-current"
                         />

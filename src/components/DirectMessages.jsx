@@ -1,82 +1,69 @@
-// File: src/components/EnhancedDirectMessages.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import { db, auth } from '../firebase';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  db,
+  getPublicCollectionPath,
+  getPrivateCollectionPath,
+  USERS_COLLECTION_NAME,
+  DM_MESSAGES_COLLECTION_NAME,
+  getDmRoomId,
+  getUserColor
+} from '../firebase.js';
 import {
   collection,
   addDoc,
   onSnapshot,
   orderBy,
   query,
-  where,
   serverTimestamp,
-  getDocs
+  doc,
+  setDoc,
+  writeBatch
 } from 'firebase/firestore';
 
-const EnhancedDirectMessages = ({ user, darkMode }) => {
+const DirectMessages = ({ user, darkMode }) => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
+  const currentRoomId = selectedUser ? getDmRoomId(user.uid, selectedUser.userId) : null;
 
-  // Define key colors for the cyberpunk look
-  const accentColor = 'indigo-500'; // For primary actions/highlights
-  const secondaryAccent = 'yellow-400'; // For contrast
-  const darkBg = 'bg-gray-800';
-  const lightBg = 'bg-white';
-  const darkCard = 'bg-gray-700';
-  const lightCard = 'bg-gray-100';
+  // Path references
+  const usersRef = useMemo(() => collection(db, getPublicCollectionPath(USERS_COLLECTION_NAME)), []);
 
-  // Automatically discover users from public messages
+
+  // 3A. Fetch User List
   useEffect(() => {
-    const discoverUsers = async () => {
-      try {
-        const messagesSnapshot = await getDocs(collection(db, 'public-messages'));
-        const uniqueUsers = new Map();
+    if (!user) return;
 
-        // Add current user first (optional, usually filtered out for DMs)
-        uniqueUsers.set(user.uid, {
-          id: user.uid,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          email: user.email
-        });
+    const q = query(usersRef, orderBy('displayName', 'asc'));
 
-        // Discover other users from public messages
-        messagesSnapshot.forEach(doc => {
-          const message = doc.data();
-          if (message.userId && message.userId !== user.uid) {
-            uniqueUsers.set(message.userId, {
-              id: message.userId,
-              displayName: message.user,
-              photoURL: message.userPhoto,
-              email: message.email
-            });
-          }
-        });
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const usersData = [];
+      querySnapshot.forEach((doc) => {
+        const userData = doc.data();
+        if (userData.userId !== user.uid) { // Exclude self
+          usersData.push(userData);
+        }
+      });
+      setUsers(usersData);
+    }, (error) => {
+      console.error("Error fetching users:", error);
+    });
 
-        setUsers(Array.from(uniqueUsers.values()));
-      } catch (error) {
-        console.error('Error discovering users:', error);
-      }
-    };
+    return () => unsubscribe();
+  }, [user, usersRef]);
 
-    discoverUsers();
-  }, [user]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // 3B. Fetch Messages for Selected User
   useEffect(() => {
-    if (!selectedUser) return;
+    if (!currentRoomId || !user) {
+      setMessages([]);
+      return;
+    }
 
-    const conversationId = [user.uid, selectedUser.id].sort().join('_');
-    const q = query(
-      collection(db, 'direct-messages'),
-      where('conversationId', '==', conversationId),
-      orderBy('timestamp', 'asc')
-    );
+    // We query the sender's private path. A security rule is needed for the receiver to read this path.
+    const roomRef = collection(db, getPrivateCollectionPath(user.uid, DM_MESSAGES_COLLECTION_NAME), currentRoomId, 'chats');
+    const q = query(roomRef, orderBy('timestamp', 'asc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const messagesData = [];
@@ -84,166 +71,157 @@ const EnhancedDirectMessages = ({ user, darkMode }) => {
         messagesData.push({ id: doc.id, ...doc.data() });
       });
       setMessages(messagesData);
+    }, (error) => {
+      console.error("Error fetching DM messages:", error);
     });
 
     return () => unsubscribe();
-  }, [selectedUser, user.uid]);
+  }, [currentRoomId, user]);
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // 3C. Register/Update current user in the shared user list
+  useEffect(() => {
+    if (!user || !user.uid) return;
+    const userDocRef = doc(db, getPublicCollectionPath(USERS_COLLECTION_NAME), user.uid);
+
+    setDoc(userDocRef, {
+      userId: user.uid,
+      displayName: user.displayName || 'Anon User',
+      photoURL: user.photoURL || '',
+      email: user.email || '',
+      lastSeen: serverTimestamp()
+    }, { merge: true }).catch(err => console.error("Error setting user document:", err));
+  }, [user]);
+
+
+  // 3D. Send Message Logic
   const sendMessage = async (e) => {
     e.preventDefault();
     if (newMessage.trim() === '' || !selectedUser) return;
 
-    const conversationId = [user.uid, selectedUser.id].sort().join('_');
+    const senderId = user.uid;
+    const receiverId = selectedUser.userId;
+    const messagePayload = {
+      text: newMessage,
+      timestamp: serverTimestamp(),
+      senderId: senderId,
+      senderName: user.displayName,
+    };
+
+    const roomId = getDmRoomId(senderId, receiverId);
+
+    // Write the message to both the sender's path and the receiver's path for easy real-time synchronization
+    const senderChatRef = collection(db, getPrivateCollectionPath(senderId, DM_MESSAGES_COLLECTION_NAME), roomId, 'chats');
+    const receiverChatRef = collection(db, getPrivateCollectionPath(receiverId, DM_MESSAGES_COLLECTION_NAME), roomId, 'chats');
+
+    const batch = writeBatch(db);
+
+    batch.set(doc(senderChatRef), messagePayload);
+    batch.set(doc(receiverChatRef), messagePayload);
 
     try {
-      await addDoc(collection(db, 'direct-messages'), {
-        text: newMessage,
-        timestamp: serverTimestamp(),
-        senderId: user.uid,
-        senderName: user.displayName,
-        receiverId: selectedUser.id,
-        receiverName: selectedUser.displayName,
-        conversationId: conversationId,
-        userPhoto: user.photoURL
-      });
+      await batch.commit();
       setNewMessage('');
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error sending DM message:', error);
     }
   };
 
+
+  // --- DM RENDER ---
   return (
-    <div className="h-full flex divide-x divide-gray-700/50">
-      {/* Users List (Sidebar) */}
-      <div className={`w-1/3 min-w-[250px] overflow-hidden ${
-        darkMode ? `${darkBg} text-gray-100` : `${lightBg} text-gray-800`
-      }`}>
-        <div className={`p-4 border-b border-dashed ${
-          darkMode ? 'border-indigo-900' : 'border-gray-300'
-        }`}>
-          <h3 className="text-xl font-bold tracking-wider text-indigo-400">USERS ONLINE</h3>
-          <p className="text-xs text-yellow-400 mt-1 uppercase">
-            {users.length - 1} contacts available
-          </p>
+    <div className="h-full flex">
+      {/* User List Sidebar */}
+      <div className={`w-1/3 border-r ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+        <div className="p-4 border-b border-indigo-500/50">
+          <h3 className={`font-extrabold tracking-wider ${darkMode ? 'text-yellow-400' : 'text-indigo-600'}`}>
+            ONLINE USERS ({users.length})
+          </h3>
         </div>
-        <div className="overflow-y-auto h-full max-h-[calc(100%-70px)]">
-          {users.filter(u => u.id !== user.uid).map((userItem) => (
-            <button
-              key={userItem.id}
-              onClick={() => setSelectedUser(userItem)}
-              className={`w-full text-left p-3 flex items-center space-x-3 border-b transition-all duration-200 transform hover:scale-[1.01] ${
-                darkMode ? 'border-gray-700' : 'border-gray-200'
-              } ${
-                selectedUser?.id === userItem.id
-                  ? `bg-indigo-600 text-white shadow-lg shadow-indigo-600/30`
+        <div className="overflow-y-auto" style={{ maxHeight: 'calc(100% - 60px)' }}>
+          {users.map((u) => (
+            <div
+              key={u.userId}
+              onClick={() => setSelectedUser(u)}
+              className={`flex items-center p-3 cursor-pointer transition-all duration-200 border-l-4 ${
+                selectedUser?.userId === u.userId
+                  ? 'bg-indigo-600/20 border-yellow-400'
                   : darkMode
-                  ? 'hover:bg-gray-700/50'
-                  : 'hover:bg-gray-100'
+                    ? 'hover:bg-gray-700 border-transparent'
+                    : 'hover:bg-gray-100 border-transparent'
               }`}
             >
               <img
-                src={userItem.photoURL || '/default-avatar.png'}
-                alt={userItem.displayName}
-                className={`w-10 h-10 rounded-full object-cover ring-1 ring-offset-2 ${
-                    selectedUser?.id === userItem.id 
-                        ? 'ring-yellow-400 ring-offset-indigo-600' 
-                        : 'ring-gray-500 ring-offset-current'
-                }`}
+                src={u.photoURL || 'https://placehold.co/40x40/374151/ffffff?text=U'}
+                alt={u.displayName}
+                className="w-8 h-8 rounded-full object-cover mr-3 ring-1 ring-offset-1 ring-offset-transparent ring-current"
               />
-              <div className="flex-1 min-w-0">
-                <p className={`font-semibold truncate ${selectedUser?.id === userItem.id ? 'text-white' : ''}`}>{userItem.displayName}</p>
-                <p className={`text-xs truncate ${selectedUser?.id === userItem.id ? 'text-indigo-200' : 'text-gray-400'}`}>
-                  {userItem.email}
-                </p>
-              </div>
-              {selectedUser?.id === userItem.id && (
-                  <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
-              )}
-            </button>
+              <span className={`text-sm font-semibold ${selectedUser?.userId === u.userId ? getUserColor(u.userId) : (darkMode ? 'text-gray-200' : 'text-gray-800')
+                }`}>
+                {u.displayName}
+              </span>
+            </div>
           ))}
+          {users.length === 0 && (
+            <p className={`p-4 text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+              No other users online.
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Chat Area (Main Panel) */}
-      <div className="flex-1 flex flex-col">
+      {/* Chat Area */}
+      <div className={`w-2/3 flex flex-col ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
         {selectedUser ? (
           <>
-            {/* Chat Header */}
-            <div className={`p-4 border-b ${
-              darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
-            }`}>
-              <div className="flex items-center space-x-3">
-                <img
-                  src={selectedUser.photoURL || '/default-avatar.png'}
-                  alt={selectedUser.displayName}
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-green-500/50"
-                />
-                <div>
-                  <span className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedUser.displayName}</span>
-                  <p className="text-xs text-green-500 flex items-center">
-                    <span className="w-2 h-2 rounded-full bg-green-500 mr-1 animate-pulse"></span>
-                    ACTIVE
-                  </p>
-                </div>
-              </div>
+            {/* Header */}
+            {/* FIXED: Removed duplicate 'className' attribute here. */}
+            <div className={`p-4 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+              <h4 className={`font-extrabold tracking-wide ${getUserColor(selectedUser.userId)}`}>
+                CHATTING WITH: {selectedUser.displayName}
+              </h4>
+              <p className="text-xs text-gray-500 font-mono mt-1">
+                User ID: {selectedUser.userId.substring(0, 8)}...
+              </p>
             </div>
 
-            {/* Messages Container */}
-            <div className={`flex-1 overflow-y-auto p-6 space-y-4 ${
-              darkMode ? 'bg-gray-900' : 'bg-gray-50'
-            }`}>
-              {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-center">
-                  <div className="p-4 border border-dashed border-gray-600 rounded-lg max-w-sm">
-                      <p className="text-gray-400 mb-1 font-mono">
-                          {'// NO MESSAGES LOGGED'}
-                      </p>
-                      <p className="text-sm text-yellow-400">
-                          {'>> INIT: secure_link_established'}
-                      </p>
-                  </div>
-                </div>
-              ) : (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.senderId === user.uid ? 'justify-end' : 'justify-start'
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.senderId === user.uid ? 'justify-end' : 'justify-start'
                     }`}
-                  >
-                    <div
-                      className={`max-w-xs lg:max-w-md rounded-xl p-3 shadow-md transition-all duration-300 ${
-                        message.senderId === user.uid
-                          ? `bg-indigo-600 text-white rounded-br-none`
-                          : darkMode
+                >
+                  <div
+                    className={`max-w-[80%] rounded-xl p-3 shadow-md ${message.senderId === user.uid
+                        ? 'bg-indigo-600 text-white rounded-br-none shadow-indigo-600/30'
+                        : darkMode
                           ? 'bg-gray-700 text-white rounded-tl-none border border-gray-600'
                           : 'bg-white text-gray-800 rounded-tl-none border border-gray-200'
                       }`}
+                  >
+                    <p className="break-words font-light">{message.text}</p>
+                    <span
+                      className={`text-[10px] block mt-1 opacity-70 ${message.senderId === user.uid
+                          ? 'text-indigo-200 text-right'
+                          : darkMode
+                            ? 'text-gray-400 text-left'
+                            : 'text-gray-500 text-left'
+                        }`}
                     >
-                      <p className="break-words font-light">{message.text}</p>
-                      <span
-                        className={`text-[10px] block mt-1 opacity-70 ${
-                          message.senderId === user.uid
-                            ? 'text-indigo-200'
-                            : darkMode
-                            ? 'text-gray-400'
-                            : 'text-gray-500'
-                        } text-right`}
-                      >
-                        {message.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
+                      {message.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
-                ))
-              )}
+                </div>
+              ))}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input Form */}
+            {/* Input */}
             <form onSubmit={sendMessage} className={`p-4 border-t ${
               darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
             }`}>
@@ -253,20 +231,18 @@ const EnhancedDirectMessages = ({ user, darkMode }) => {
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder={`Send encrypted message to ${selectedUser.displayName}...`}
-                  className={`flex-1 rounded-lg border px-4 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${
-                    darkMode
+                  className={`flex-1 rounded-lg border px-4 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode
                       ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                  }`}
+                    }`}
                 />
                 <button
                   type="submit"
                   disabled={!newMessage.trim()}
-                  className={`flex-shrink-0 px-4 py-2 rounded-lg font-bold tracking-wider transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed ${
-                    darkMode 
-                        ? 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                  }`}
+                  className={`flex-shrink-0 px-4 py-2 rounded-lg font-bold tracking-wider transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed ${darkMode
+                      ? 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }`}
                 >
                   SEND {'>'}
                 </button>
@@ -274,17 +250,10 @@ const EnhancedDirectMessages = ({ user, darkMode }) => {
             </form>
           </>
         ) : (
-          /* Initial State / Empty Chat */
-          <div className={`flex-1 flex items-center justify-center ${
-            darkMode ? 'bg-gray-900' : 'bg-gray-50'
-          }`}>
-            <div className="text-center p-6 border-2 border-dashed border-yellow-400/50 rounded-lg backdrop-blur-sm">
-              <p className="text-xl font-bold text-yellow-400 mb-2 font-mono">
-                {'// TERMINAL_STANDBY'}
-              </p>
-              <p className="text-gray-400 dark:text-gray-500 text-sm">
-                Select a user on the left to initiate a private, secure connection.
-              </p>
+          <div className="flex items-center justify-center h-full">
+            <p className={`p-4 border border-dashed rounded-lg max-w-sm text-center ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500'}`}>
+              <span className="text-yellow-400 font-bold block mb-2">{'// TARGET_SELECTION_REQUIRED'}</span>
+              Select an online user from the left pane to initiate a direct message.
             </div>
           </div>
         )}
@@ -293,4 +262,4 @@ const EnhancedDirectMessages = ({ user, darkMode }) => {
   );
 };
 
-export default EnhancedDirectMessages;
+export default DirectMessages;
