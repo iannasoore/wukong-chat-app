@@ -35,3 +35,29 @@ const PublicChat = ({ user, darkMode }) => {
 
         return () => unsubscribe();
     }, []);
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    const sendMessage = async (e) => {
+        e.preventDefault();
+        if (newMessage.trim() === '') return;
+    
+        try {
+            await addDoc(collection(db, 'public-messages'), {
+                text: newMessage,
+                timestamp: serverTimestamp(),
+                user: user.displayName,
+                user.id: user.uid,
+                userPhoto: user.photoURL
+            });
+            setNewMessage('');
+        } catch (error) {
+            console.error('Error sending message:', error);
+        }
+    };
+
+    return (
+        }
+    })
