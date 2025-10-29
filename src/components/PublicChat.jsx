@@ -78,9 +78,9 @@ const PublicChat = ({ user, darkMode }) => {
                             </span>
                         </div>
                     </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+                ))}
+                <div ref={messagesEndRef} />
+            </div>
 
       {/* Message Input */}
       <form

@@ -17,18 +17,23 @@ const DirectMessages = ({ user, darkMode }) => {
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
   // Fetch all users (simplified - in real app, you'd have a users collection)
-  useEffect(() => {
-    // This is a simplified approach. In production, you'd maintain a users collection
-    const fetchUsers = async () => {
-      // For demo purposes, we'll use a static list
-      // In real app, you'd query your users collection from Firestore
-      setUsers([
-        { id: 'user1', displayName: 'John Doe', photoURL: '' },
-        { id: 'user2', displayName: 'Jane Smith', photoURL: '' },
-        // Add more users as needed
-      ]);
-    };
-    fetchUsers();
+useEffect(() => {
+    // In a real app, you would likely have a dedicated 'users' collection.
+    // When a user signs in, you could use a function to add/update their info there.
+    // For this implementation, we will query the public messages to find unique users.
+    const q = query(collection(db, 'public-messages'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const foundUsers = {};
+      querySnapshot.forEach((doc) => {
+        const { userId, user: displayName, userPhoto } = doc.data();
+        if (userId !== auth.currentUser.uid && !foundUsers[userId]) {
+          foundUsers[userId] = { id: userId, displayName, photoURL: userPhoto };
+        }
+      });
+      setUsers(Object.values(foundUsers));
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const scrollToBottom =() => {
