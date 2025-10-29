@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   db,
-  getPublicCollectionPath,
-  getPrivateCollectionPath,
   USERS_COLLECTION_NAME,
   DM_MESSAGES_COLLECTION_NAME,
   getDmRoomId,
-  getUserColor
+  getUserColor,
+  getPublicCollectionPath,
+  getPrivateCollectionPath
 } from '../firebase.js';
 import {
   collection,
@@ -20,7 +20,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 
-const DirectMessages = ({ user, darkMode }) => {
+const DirectMessages = ({ user, darkMode, appId = "default-app" }) => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -29,7 +29,7 @@ const DirectMessages = ({ user, darkMode }) => {
   const currentRoomId = selectedUser ? getDmRoomId(user.uid, selectedUser.userId) : null;
 
   // Path references
-  const usersRef = useMemo(() => collection(db, getPublicCollectionPath(USERS_COLLECTION_NAME)), []);
+  const usersRef = useMemo(() => collection(db, getPublicCollectionPath(appId, USERS_COLLECTION_NAME)), [appId]);
 
 
   // 3A. Fetch User List
@@ -42,7 +42,7 @@ const DirectMessages = ({ user, darkMode }) => {
       const usersData = [];
       querySnapshot.forEach((doc) => {
         const userData = doc.data();
-        if (userData.userId !== user.uid) { // Exclude self
+        if (userData.userId !== user.uid) { // Exclude self. FIXED: was checking against userData.uid
           usersData.push(userData);
         }
       });
@@ -52,7 +52,7 @@ const DirectMessages = ({ user, darkMode }) => {
     });
 
     return () => unsubscribe();
-  }, [user, usersRef]);
+  }, [user, usersRef, appId]);
 
   // 3B. Fetch Messages for Selected User
   useEffect(() => {
@@ -62,7 +62,7 @@ const DirectMessages = ({ user, darkMode }) => {
     }
 
     // We query the sender's private path. A security rule is needed for the receiver to read this path.
-    const roomRef = collection(db, getPrivateCollectionPath(user.uid, DM_MESSAGES_COLLECTION_NAME), currentRoomId, 'chats');
+    const roomRef = collection(db, getPrivateCollectionPath(appId, user.uid, DM_MESSAGES_COLLECTION_NAME), currentRoomId, 'chats');
     const q = query(roomRef, orderBy('timestamp', 'asc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -76,7 +76,7 @@ const DirectMessages = ({ user, darkMode }) => {
     });
 
     return () => unsubscribe();
-  }, [currentRoomId, user]);
+  }, [currentRoomId, user, appId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -85,7 +85,7 @@ const DirectMessages = ({ user, darkMode }) => {
   // 3C. Register/Update current user in the shared user list
   useEffect(() => {
     if (!user || !user.uid) return;
-    const userDocRef = doc(db, getPublicCollectionPath(USERS_COLLECTION_NAME), user.uid);
+    const userDocRef = doc(db, getPublicCollectionPath(appId, USERS_COLLECTION_NAME), user.uid);
 
     setDoc(userDocRef, {
       userId: user.uid,
@@ -94,7 +94,7 @@ const DirectMessages = ({ user, darkMode }) => {
       email: user.email || '',
       lastSeen: serverTimestamp()
     }, { merge: true }).catch(err => console.error("Error setting user document:", err));
-  }, [user]);
+  }, [user, appId]);
 
 
   // 3D. Send Message Logic
@@ -114,8 +114,8 @@ const DirectMessages = ({ user, darkMode }) => {
     const roomId = getDmRoomId(senderId, receiverId);
 
     // Write the message to both the sender's path and the receiver's path for easy real-time synchronization
-    const senderChatRef = collection(db, getPrivateCollectionPath(senderId, DM_MESSAGES_COLLECTION_NAME), roomId, 'chats');
-    const receiverChatRef = collection(db, getPrivateCollectionPath(receiverId, DM_MESSAGES_COLLECTION_NAME), roomId, 'chats');
+    const senderChatRef = collection(db, getPrivateCollectionPath(appId, senderId, DM_MESSAGES_COLLECTION_NAME), roomId, 'chats');
+    const receiverChatRef = collection(db, getPrivateCollectionPath(appId, receiverId, DM_MESSAGES_COLLECTION_NAME), roomId, 'chats');
 
     const batch = writeBatch(db);
 
@@ -238,20 +238,16 @@ const DirectMessages = ({ user, darkMode }) => {
                 />
                 <button
                   type="submit"
-                  disabled={!newMessage.trim()}
-                  className={`flex-shrink-0 px-4 py-2 rounded-lg font-bold tracking-wider transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed ${darkMode
-                      ? 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
-                      : 'bg-blue-500 hover:bg-blue-600 text-white'
-                    }`}
+                  disabled={!newMessage.trim()}                  
                 >
-                  SEND {'>'}
+                  <Send className="w-5 h-5" />
                 </button>
               </div>
             </form>
           </>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className={`p-4 border border-dashed rounded-lg max-w-sm text-center ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500'}`}>
+            <div className={`p-4 border border-dashed rounded-lg max-w-sm text-center ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500'}`}>
               <span className="text-yellow-400 font-bold block mb-2">{'// TARGET_SELECTION_REQUIRED'}</span>
               Select an online user from the left pane to initiate a direct message.
             </div>

@@ -1,80 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PublicChat from './PublicChat.jsx';
 import DirectMessages from './DirectMessages.jsx';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase.js';
+import { MessageSquare, Users } from 'lucide-react';
 
-const ChatRoom = ({ user, darkMode, handleSignOut }) => {
-  const [activeTab, setActiveTab] = useState('public');
-  const primaryColor = darkMode ? 'bg-indigo-900' : 'bg-blue-600';
-  const textColor = darkMode ? 'text-gray-100' : 'text-gray-900';
-  const subtextColor = darkMode ? 'text-gray-400' : 'text-gray-600';
-  const borderColor = darkMode ? 'border-gray-700' : 'border-gray-200';
-  const cardBg = darkMode ? 'bg-gray-800' : 'bg-gray-50';
+const appId = 'default-app-id';
+
+// 2.7 ChatRoom Component (Contains Tabs)
+const ChatRoom = ({ user, darkMode }) => {
+  const [activeTab, setActiveTab] = useState('public'); // 'public' or 'dm'
+
+  // Update user's last active time every minute
+  useEffect(() => {
+    const updateActiveTime = async () => {
+        if (!user) return;
+        try {
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+            await updateDoc(userRef, { lastActive: serverTimestamp() });
+        } catch (error) {
+            // Ignore common permission errors for anon users
+            console.warn("Could not update last active time:", error.message);
+        }
+    };
+
+    updateActiveTime();
+    const interval = setInterval(updateActiveTime, 60000); // 1 minute
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const TabButton = ({ tab, icon: Icon, label }) => (
+    <button
+      onClick={() => setActiveTab(tab)}
+      className={`px-4 py-2 font-bold flex items-center space-x-2 transition-all duration-200 border-b-2 font-mono text-sm
+        ${activeTab === tab
+          ? 'text-yellow-400 border-yellow-400 bg-indigo-600/20'
+          : darkMode
+            ? 'text-gray-400 border-transparent hover:text-yellow-500/70 hover:bg-gray-800'
+            : 'text-gray-600 border-transparent hover:text-indigo-600 hover:bg-gray-200'
+        }`}
+    >
+      <Icon className="w-4 h-4" />
+      <span>{label}</span>
+    </button>
+  );
 
   return (
-    <div className={`max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm ${cardBg} ${darkMode ? 'shadow-indigo-900/50' : 'shadow-gray-300/50'
-      } transition-all duration-300`}>
-
-      {/* Header (Top Bar) */}
-      <div className={`p-4 flex justify-between items-center border-b-2 ${borderColor} ${cardBg}`}>
-        <div className="flex items-center">
-          <img
-            src={user.photoURL || 'https://placehold.co/48x48/374151/ffffff?text=U'}
-            alt={user.displayName}
-            className="w-12 h-12 rounded-full object-cover ring-2 ring-indigo-500 mr-4 transition-transform duration-300 hover:scale-105"
-          />
-          <div className='flex flex-col'>
-            <span className={`text-xl font-extrabold tracking-wider ${textColor}`}>
-              {user.displayName}
-            </span>
-            <span className="text-xs text-gray-500 font-mono">
-              ID: {user.uid.substring(0, 16)}...
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={handleSignOut}
-            className={`px-3 py-1 text-sm font-medium rounded-full border border-current transition-all duration-300 ${darkMode
-                ? 'text-red-400 border-red-400 hover:bg-red-400 hover:text-gray-900'
-                : 'text-red-500 border-red-500 hover:bg-red-500 hover:text-white'
-              }`}
-          >
-            LOG OUT
-          </button>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className={`border-b-2 ${borderColor}`}>
-        <nav className="flex divide-x divide-current">
-          <button
-            onClick={() => setActiveTab('public')}
-            className={`flex-1 py-3 px-6 text-center text-lg font-semibold tracking-wide transition-all duration-300 transform -skew-x-6 mr-1 ${activeTab === 'public'
-                ? `${primaryColor} ${textColor} border-b-4 border-yellow-400 shadow-inner`
-                : `${cardBg} ${subtextColor} hover:bg-opacity-75`
-              }`}
-          >
-            <span className="skew-x-6 inline-block">Public Chat</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('dm')}
-            className={`flex-1 py-3 px-6 text-center text-lg font-semibold tracking-wide transition-all duration-300 transform skew-x-6 ml-1 ${activeTab === 'dm'
-                ? `${primaryColor} ${textColor} border-b-4 border-yellow-400 shadow-inner`
-                : `${cardBg} ${subtextColor} hover:bg-opacity-75`
-              }`}
-          >
-            <span className="-skew-x-6 inline-block">Direct Messages</span>
-          </button>
-        </nav>
+    <div className={`flex flex-col rounded-xl shadow-2xl overflow-hidden transition-colors duration-500 border-2 ${darkMode ? 'shadow-indigo-500/30 border-indigo-500/50' : 'shadow-gray-400/50 border-gray-200'}`} style={{ height: '75vh' }}>
+      
+      {/* Tab Header */}
+      <div className={`flex border-b border-dashed ${darkMode ? 'border-indigo-500/50 bg-gray-900' : 'border-gray-200 bg-white'}`}>
+        <TabButton tab="public" icon={MessageSquare} label="Public Chat" />
+        <TabButton tab="dm" icon={Users} label="Direct Messages" />
       </div>
 
       {/* Chat Content */}
-      <div className="h-[400px] lg:h-[600px] overflow-y-hidden">
-        {activeTab === 'public' ? (
-          <PublicChat user={user} darkMode={darkMode} />
-        ) : (
-          <DirectMessages user={user} darkMode={darkMode} />
-        )}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === 'public' && <PublicChat user={user} darkMode={darkMode} />}
+        {activeTab === 'dm' && <DirectMessages user={user} darkMode={darkMode} />}
       </div>
     </div>
   );

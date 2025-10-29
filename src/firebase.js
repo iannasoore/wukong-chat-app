@@ -1,65 +1,60 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
-// --- FIREBASE INITIALIZATION & AUTH ---
-// MANDATORY: Use environment variables for initialization
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBd5lPehhtPJXkQLq4VAouAB-2dAVB7RMY",
+  authDomain: "buddha-chat-59401.firebaseapp.com",
+  projectId: "buddha-chat-59401",
+  storageBucket: "buddha-chat-59401.firebasestorage.app",
+  messagingSenderId: "328835328415",
+  appId: "1:328835328415:web:84a2c3ebca52635e3ab5aa",
+  measurementId: "G-D7RXYFMPQ1"
+};
+
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const googleProvider = new GoogleAuthProvider();
+const analytics = getAnalytics(app);
 
-// --- HELPERS & CONSTANTS ---
-const PUBLIC_COLLECTION_NAME = 'public-messages';
-const USERS_COLLECTION_NAME = 'users';
-const DM_MESSAGES_COLLECTION_NAME = 'messages';
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+export const db = getFirestore(app);
 
-// Function to generate a predictable room ID for two users
-const getDmRoomId = (uid1, uid2) => {
-    return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
-};
+// --- COLLECTION/DOCUMENT HELPERS ---
 
-// Function to get the path for public data
-const getPublicCollectionPath = (collectionName) => {
-    return `artifacts/${appId}/public/data/${collectionName}`;
-};
+export const USERS_COLLECTION_NAME = 'users';
+export const DM_MESSAGES_COLLECTION_NAME = 'dm-messages';
 
-// Function to get the path for a specific user's private data
-const getPrivateCollectionPath = (userId, collectionName) => {
-    return `artifacts/${appId}/users/${userId}/${collectionName}`;
-};
+export function getPublicCollectionPath(appId, collectionName) {
+  return `artifacts/${appId}/public/data/${collectionName}`;
+}
 
-// Function to assign a unique color per user ID for their name
-const getUserColor = (userId) => {
-    const colors = [
-        'text-yellow-400',
-        'text-cyan-400',
-        'text-green-400',
-        'text-red-400',
-        'text-pink-400',
-        'text-orange-400'
-    ];
-    let hash = 0;
-    for (let i = 0; i < userId.length; i++) {
-        hash = userId.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const index = Math.abs(hash) % colors.length;
-    return colors[index];
-};
+export function getPrivateCollectionPath(appId, uid, collectionName) {
+  return `artifacts/${appId}/private/${uid}/${collectionName}`;
+}
 
-export {
-    app,
-    auth,
-    db,
-    googleProvider,
-    PUBLIC_COLLECTION_NAME,
-    USERS_COLLECTION_NAME,
-    DM_MESSAGES_COLLECTION_NAME,
-    getDmRoomId,
-    getPublicCollectionPath,
-    getPrivateCollectionPath,
-    getUserColor
-};
+export function getDmRoomId(uid1, uid2) {
+  return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
+}
+
+const colors = [
+  'text-red-400',
+  'text-orange-400',
+  'text-yellow-400',
+  'text-lime-400',
+  'text-green-400',
+  'text-teal-400',
+  'text-cyan-400',
+  'text-blue-400',
+  'text-indigo-400',
+  'text-purple-400',
+  'text-pink-400',
+];
+
+export const getUserColor = (uid) => colors[uid.charCodeAt(uid.length - 1) % colors.length];

@@ -1,146 +1,122 @@
 // app.jsx
 import React, { useEffect, useState } from "react";
-import { onAuthStateChanged, signInAnonymously, signOut } from "firebase/auth";
-import { auth, db } from "./firebase";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db, googleProvider } from "./firebase";
+import { LogOut } from "lucide-react";
 
-import Login from "./login";
-import PublicChat from "./publicchat";
-import Chat from "./chat";
-import ThemeToggle from "./themetoggle";
-import { MessageSquare, Users, LogOut } from "lucide-react";
+import Login from "./components/Login.jsx";
+import ThemeToggle from "./components/ThemeToggle.jsx";
+import ChatRoom from "./components/ChatRoom.jsx";
 
-const App = () => {
+// Custom sign-in function using the initial auth token
+const useAuth = () => {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-  const [tab, setTab] = useState("public"); // 'public' or 'dm'
 
-  // Initialize auth
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (!currentUser) {
-        await signInAnonymously(auth);
-      } else {
+    let unsubscribe;
+
+    const signIn = async () => {
+      
+      unsubscribe = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
-        // Ensure user doc exists for DMs
-        const userRef = doc(db, "artifacts", "default-app", "public", "data", "users", currentUser.uid);
-        await setDoc(
-          userRef,
-          {
-            uid: currentUser.uid,
-            displayName: currentUser.displayName || `Anon-${currentUser.uid.slice(0, 6)}`,
-            photoURL:
-              currentUser.photoURL || "https://placehold.co/40x40/4F46E5/FFFFFF?text=U",
-            lastActive: serverTimestamp(),
-          },
-          { merge: true }
-        );
-      }
-      setAuthReady(true);
-    });
-
-    return () => unsubscribe();
+        setAuthReady(true);
+        if (currentUser) {
+          // Ensure user profile exists for DM purposes
+          const userRef = doc(db, 'artifacts', "default-app-id", 'public', 'data', 'users', currentUser.uid);
+          setDoc(userRef, { 
+            uid: currentUser.uid, 
+            displayName: currentUser.displayName || `Anon-${currentUser.uid.substring(0, 8)}`,
+            photoURL: currentUser.photoURL || 'https://placehold.co/40x40/4F46E5/FFFFFF?text=U',
+            lastActive: serverTimestamp() 
+          }, { merge: true });
+        }
+      });
+    };
+    
+    signIn();
+    
+    return () => unsubscribe && unsubscribe();
   }, []);
 
-  // Dark mode init
+  return { user, authReady };
+};
+
+const App = () => {
+  const { user, authReady } = useAuth();
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Theme initialization from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("darkMode") === "true";
-    setDarkMode(saved);
-    document.documentElement.classList.toggle("dark", saved);
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(isDarkMode);
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    }
   }, []);
 
-  // Dark mode toggle
+  // Theme toggle handler
   const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    localStorage.setItem("darkMode", newMode);
-    document.documentElement.classList.toggle("dark", newMode);
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode.toString());
+    
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
+  const handleSignOut = () => {
+    signOut(auth);
   };
 
   if (!authReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center font-mono bg-gray-950 text-yellow-400">
-        <p>INITIALIZING PROTOCOL...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white font-mono">
+        <p className="text-xl text-yellow-400">LOADING_ACCESS_PROTOCOL...</p>
       </div>
     );
   }
 
   return (
-    <div
-      className={`min-h-screen transition-colors font-mono ${
-        darkMode ? "bg-gray-950 text-white" : "bg-gray-50 text-gray-900"
-      }`}
-    >
+    // Global container: Set dark background for full screen
+    <div className={`min-h-screen transition-colors duration-500 ${
+      darkMode 
+        ? 'bg-gray-950 text-white' // Deeper background for cyberpunk feel
+        : 'bg-gray-50 text-gray-900'
+    } font-mono`}>
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <header className="flex justify-between items-center mb-8 pb-4 border-b border-indigo-500/50">
-          <h1
-            className={`text-3xl font-extrabold tracking-widest ${
-              darkMode ? "text-yellow-400" : "text-indigo-600"
-            }`}
-          >
+        
+        {/* Header: Styled to look sharp and futuristic */}
+        <header className="flex justify-between items-center mb-10 pb-4 border-b border-dashed border-indigo-500/50">
+          <h1 className={`text-3xl lg:text-4xl font-extrabold tracking-widest ${
+            darkMode ? 'text-yellow-400' : 'text-indigo-600'
+          } transition-colors duration-300`}>
             WUKONG CHAT
           </h1>
-
-          <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-4">
             <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
             {user && (
               <button
-                onClick={handleLogout}
-                className={`px-3 py-1 text-sm font-semibold rounded-full border transition-all ${
-                  darkMode
-                    ? "text-red-400 border-red-400 hover:bg-red-900"
-                    : "text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
+                onClick={handleSignOut}
+                className={`px-3 py-1 text-sm font-medium rounded-full border border-current transition-all duration-300 ${
+                    darkMode 
+                        ? 'text-red-400 border-red-400 hover:bg-red-400 hover:text-gray-900' 
+                        : 'text-red-500 border-red-500 hover:bg-red-500 hover:text-white'
                 }`}
               >
-                <LogOut className="inline w-4 h-4 mr-1" />
-                Logout
+                <LogOut className="w-4 h-4 inline mr-1 -mt-0.5" /> LOG OUT
               </button>
             )}
           </div>
         </header>
 
-        {/* Body */}
+        {/* Content based on Auth State */}
         {user ? (
-          <>
-            <div className="flex justify-center mb-6 space-x-2">
-              <button
-                onClick={() => setTab("public")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border-b-2 font-semibold transition ${
-                  tab === "public"
-                    ? "border-yellow-400 text-yellow-400"
-                    : darkMode
-                    ? "border-transparent text-gray-400 hover:text-yellow-400"
-                    : "border-transparent text-gray-600 hover:text-indigo-600"
-                }`}
-              >
-                <MessageSquare className="w-4 h-4" /> Public
-              </button>
-              <button
-                onClick={() => setTab("dm")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border-b-2 font-semibold transition ${
-                  tab === "dm"
-                    ? "border-yellow-400 text-yellow-400"
-                    : darkMode
-                    ? "border-transparent text-gray-400 hover:text-yellow-400"
-                    : "border-transparent text-gray-600 hover:text-indigo-600"
-                }`}
-              >
-                <Users className="w-4 h-4" /> Direct
-              </button>
-            </div>
-
-            {tab === "public" ? (
-              <PublicChat user={user} darkMode={darkMode} />
-            ) : (
-              <Chat user={user} darkMode={darkMode} />
-            )}
-          </>
+          <ChatRoom user={user} darkMode={darkMode} />
         ) : (
           <Login darkMode={darkMode} />
         )}
