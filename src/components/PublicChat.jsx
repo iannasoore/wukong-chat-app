@@ -58,6 +58,22 @@ const PublicChat = ({ user, darkMode }) => {
         }
     };
 
-    return (
+    return ( 
+        <div className="h-full flex-col">
+            {/* Message List */}
+            <div className="flex-1 overflow-y-auto p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} space-y-4 ">
+                {messages.map((message) => ( 
+                    <div key={message.id} className={'flex ${message.userId === user.uid ? 'justify-end' : 'justify-start'}'}>
+                        <div className={'max-w-xs lg:max-w-md rounded-lg p-3 ${message.userId === user.uid ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}'}>
+                            {message.userId !== user.uid && (
+                                <div className="flex items-center mb-2">
+                                    <img src={message.userPhoto || '/default-avatar.png'} alt={message.user} className="w-8 h-8 rounded-full mr-2" />
+                                    <span className="font-semibold">{message.user}</span>
+                                </div>
+                            )}
+
+                                <p className="break-words">{message.text}</p>
+                                <span className={'text-xs block mt-1 ${message.userId === user.uid ? 'text-gray-300' : 'text-gray-500'}'}>
+                                    
         }
     })
