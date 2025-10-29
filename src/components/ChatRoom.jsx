@@ -1,54 +1,25 @@
-// File: src/components/ChatRoom.jsx
 import React, { useState } from 'react';
-import PublicChat from './PublicChat.jsx';
-import DirectMessages from './DirectMessages.jsx';
-import ThemeToggle from './ThemeToggle.js';
+import PublicChat from './PublicChat';
+import DirectMessages from './DirectMessages';
 
-const ChatRoom = ({ user, darkMode, toggleDarkMode, handleSignOut }) => {
+const ChatRoom = ({ user, darkMode }) => {
   const [activeTab, setActiveTab] = useState('public');
 
   // Define color palette variables for cleaner conditional classes
   const primaryColor = darkMode ? 'bg-indigo-900' : 'bg-blue-600';
-  const primaryHover = darkMode ? 'hover:bg-indigo-800' : 'hover:bg-blue-700';
   const textColor = darkMode ? 'text-gray-100' : 'text-gray-900';
   const subtextColor = darkMode ? 'text-gray-400' : 'text-gray-600';
   const borderColor = darkMode ? 'border-gray-700' : 'border-gray-200';
   const bgColor = darkMode ? 'bg-gray-900' : 'bg-white';
   const cardBg = darkMode ? 'bg-gray-800' : 'bg-gray-50';
 
+
   return (
     <div className={`max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm ${bgColor} ${
       darkMode ? 'shadow-indigo-900/50' : 'shadow-gray-300/50'
     } transition-all duration-300`}>
-      
-      {/* Header (Top Bar) */}
-      <div className={`p-4 flex justify-between items-center border-b-2 ${borderColor} ${cardBg}`}>
-        <div className="flex items-center">
-          <img
-            src={user.photoURL || '/default-avatar.png'}
-            alt={user.displayName}
-            className="w-12 h-12 rounded-full object-cover ring-2 ring-indigo-500 mr-4 transition-transform duration-300 hover:scale-105"
-          />
-          <span className={`text-xl font-extrabold tracking-wider ${textColor}`}>
-            {user.displayName}
-          </span>
-        </div>
-        <div className="flex items-center space-x-4">
-          <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-          <button
-            onClick={handleSignOut}
-            className={`px-3 py-1 text-sm font-medium rounded-full border border-current transition-all duration-300 ${
-                darkMode 
-                    ? 'text-red-400 border-red-400 hover:bg-red-400 hover:text-gray-900' 
-                    : 'text-red-500 border-red-500 hover:bg-red-500 hover:text-white'
-            }`}
-          >
-            Log Out
-          </button>
-        </div>
-      </div>
 
-      {/* Navigation Tabs */}
+      {/* Tab Navigation */}
       <div className={`border-b-2 ${borderColor}`}>
         <nav className="flex divide-x divide-current">
           <button
