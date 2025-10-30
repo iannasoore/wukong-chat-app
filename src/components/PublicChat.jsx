@@ -45,7 +45,7 @@ const PublicChat = ({ user, darkMode, appId = "default-app-id" }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-cyb-medium/50">
+    <div className="chat-window">
       <MessageDisplay messages={messages} currentUserId={user.uid} darkMode={darkMode} />
       <MessageInput 
         message={message} 

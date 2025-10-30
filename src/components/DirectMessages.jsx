@@ -117,7 +117,7 @@ const DirectMessages = ({ user, darkMode, appId = "default-app-id" }) => {
         <div className="dm-user-list">
           {users.map((u) => (
             <button
-              key={u.userId}
+              key={u.id}
               onClick={() => handleSelectUser(u)}
               className={`dm-user-button ${selectedUser?.id === u.id ? 'selected' : ''}`}
             >

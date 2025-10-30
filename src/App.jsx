@@ -26,7 +26,7 @@ const useAuth = () => {
           // Ensure user profile exists for DM purposes
           const userRef = doc(db, 'artifacts', "default-app-id", 'public', 'data', 'users', currentUser.uid);
           setDoc(userRef, { 
-            uid: currentUser.uid, 
+            userId: currentUser.uid, 
             displayName: currentUser.displayName || `Anon-${currentUser.uid.substring(0, 8)}`,
             photoURL: currentUser.photoURL || 'https://placehold.co/40x40/4F46E5/FFFFFF?text=U',
             lastActive: serverTimestamp() 
