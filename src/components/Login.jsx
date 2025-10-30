@@ -13,48 +13,31 @@ const Login = ({ darkMode }) => {
   };
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center p-4">
-      <div className={`max-w-md w-full p-8 rounded-xl border-2 border-indigo-500/50 backdrop-blur-sm 
-        shadow-3xl transition-all duration-500 font-mono
-        ${darkMode ? 'bg-gray-900/80 shadow-indigo-500/30' : 'bg-white/90 shadow-gray-400/50'}`}>
-
-        <div className="text-center">
-          <h2 className={`text-4xl font-extrabold tracking-widest mb-2 ${
-            darkMode
-              ? 'text-yellow-400'
-              : 'text-indigo-600'
-          }`}
-          >
+    <div className="login-screen">
+      <div className="login-card">
+        <div>
+          <h2 className="login-title">
             WUKONG CHAT
           </h2>
-          <p className={`mb-8 text-lg font-medium ${
-            darkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>
+          <p className="login-subtitle">
             ACCESS PROTOCOL: REQUIRED
           </p>
           
           <button
             onClick={signInWithGoogle}
-            className={`w-full font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] 
-              flex items-center justify-center space-x-3 text-lg border-2 border-current
-              ${darkMode 
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/50 border-indigo-400'
-                  : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-400/50 border-indigo-600'
-              }`}
+            className="btn login-btn"
           >
-            <span className="text-xl -translate-y-[1px]">
-                <img 
-                    src="https://developers.google.com/identity/images/g-logo.png" 
-                    alt="Google" 
-                    className="w-6 h-6 mr-2 inline-block bg-white rounded-sm p-0.5"
-                />
-            </span>
+            <img 
+                src="https://developers.google.com/identity/images/g-logo.png" 
+                alt="Google" 
+                style={{width: '1.5rem', height: '1.5rem', backgroundColor: 'white', borderRadius: '2px', padding: '2px'}}
+            />
             <span>
                 INITIATE_LOGIN
             </span>
           </button>
-          <p className={`mt-6 text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            <span className="text-yellow-400 mr-1">//</span> Secure Connection via Firebase Auth
+          <p className="login-footer">
+            <span style={{color: 'var(--accent)', marginRight: '0.25rem'}}>//</span> Secure Connection via Firebase Auth
           </p>
         </div>
       </div>
