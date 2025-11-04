@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Dev-friendly rules for testing message writes:
+    // - allow reads to public data for everyone
+    // - allow writes to public data only for authenticated users
+    // NOTE: These rules are intentionally permissive for development/testing.
+    // For production, replace with stricter validation (field types, lengths, auth checks).
+    match /artifacts/{appId}/public/data/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Allow other reads for convenience during testing
+    match /{document=**} {
+      allow read: if true;
+    }
+  }
+}

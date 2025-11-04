@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db, getPublicCollectionPath, getPrivateCollectionPath, getDmRoomId, getUserColor } from '../firebase.js';
 import {
-  collection,
   addDoc,
+  collection,
+  doc,
+  limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
-  doc,
   writeBatch
 } from 'firebase/firestore';
 import MessageDisplay from './MessageDisplay.jsx'; // Reusable component for showing messages
@@ -23,6 +24,8 @@ const DirectMessages = ({ user, darkMode, appId = "default-app-id" }) => {
   // Holds the user object for the currently active chat, or `null` if none is selected.
   const [messages, setMessages] = useState([]); // Holds the messages for the currently selected chat.
   const [message, setMessage] = useState(''); // Holds the text for the message input box.
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
   const [activeUsers, setActiveUsers] = useState({}); // An object to track the online/offline status of each user.
 
   const currentUserId = user.uid; // A convenient variable for the current user's ID.
@@ -95,13 +98,17 @@ const DirectMessages = ({ user, darkMode, appId = "default-app-id" }) => {
     if (!text || !selectedUser) return;
 
     try {
+      setError(null);
+      setSending(true);
       const chatID = [currentUserId, selectedUser.id].sort().join('_');
       const messagesRef = collection(db, 'artifacts', appId, 'public', 'data', 'chats', `chat_${chatID}`, 'messages');
 
-      // Add the new message document to the database.
+      // Add the new message document to the database and include a client timestamp
+      // as a fallback for the UI.
       await addDoc(messagesRef, {
         text: text,
         createdAt: serverTimestamp(),
+        clientCreatedAt: Date.now(),
         uid: user.uid,
         displayName: user.displayName || `Anon-${user.uid.substring(0, 8)}`,
         photoURL: user.photoURL || 'https://placehold.co/40x40/4F46E5/FFFFFF?text=U',
@@ -110,6 +117,12 @@ const DirectMessages = ({ user, darkMode, appId = "default-app-id" }) => {
       setMessage('');
     } catch (error) {
       console.error("Error sending DM:", error);
+      const code = error?.code || error?.status || '';
+      const message = error?.message || String(error);
+      setError(code ? `${code}: ${message}` : message);
+    }
+    finally {
+      setSending(false);
     }
   };
 
@@ -181,11 +194,15 @@ const DirectMessages = ({ user, darkMode, appId = "default-app-id" }) => {
               darkMode={darkMode}
             />
 
+            {error && (
+              <div style={{padding: '0.5rem 1rem', color: 'var(--error)'}}>Error sending DM: {error}</div>
+            )}
+
             <MessageInput 
               message={message} 
               setMessage={setMessage} 
               sendMessage={sendMessage} 
-              disabled={!selectedUser}
+              disabled={!selectedUser || sending}
               darkMode={darkMode}
             />
           </>

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-// 2.3 MessageDisplay Component
+//  MessageDisplay Component
 const MessageDisplay = ({ messages, currentUserId, darkMode }) => {
   const scrollRef = useRef();
 
@@ -14,8 +14,11 @@ const MessageDisplay = ({ messages, currentUserId, darkMode }) => {
     <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
       {messages.map((msg) => {
         const isSelf = msg.uid === currentUserId;
-        const time = msg.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...';
-        
+        // Prefer server timestamp when available, otherwise fall back to a
+        // client-provided timestamp (`clientCreatedAt`) included at send time.
+        const timeDate = msg.createdAt ? (typeof msg.createdAt.toDate === 'function' ? msg.createdAt.toDate() : new Date(msg.createdAt)) : (msg.clientCreatedAt ? new Date(msg.clientCreatedAt) : null);
+        const time = timeDate ? timeDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+
         return (
           <div key={msg.id} className={`message-row ${isSelf ? 'self' : ''}`}>
             <div className={`message-bubble ${isSelf ? 'self' : 'other'}`}>

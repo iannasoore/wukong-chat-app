@@ -20,7 +20,7 @@ const Login = ({ darkMode }) => {
             WUKONG CHAT
           </h2>
           <p className="login-subtitle">
-            ACCESS PROTOCOL: REQUIRED
+            ACCESS PROTOCOL REQUIRED
           </p>
           
           <button
@@ -33,7 +33,7 @@ const Login = ({ darkMode }) => {
                 style={{width: '1.5rem', height: '1.5rem', backgroundColor: 'white', borderRadius: '2px', padding: '2px'}}
             />
             <span>
-                INITIATE_LOGIN
+                loging in with Google
             </span>
           </button>
           <p className="login-footer">

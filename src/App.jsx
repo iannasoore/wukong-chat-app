@@ -10,19 +10,24 @@ import ThemeToggle from "./components/ThemeToggle.jsx";
 import ChatRoom from "./components/ChatRoom.jsx";
 
 // Custom sign-in function using the initial auth token
-const useAuth = () => {
+const useAuth = () => {    //common js arrow function
+  //useAuth is a custom hook. its reusable 
+
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
-  useEffect(() => {
+  useEffect(() => {  // useEffect runs after the component mounts
+    // Initialize Firebase Auth and Firestore
+    const auth = getAuth();
+    const db = getFirestore();
     let unsubscribe;
 
     const signIn = async () => {
       
-      unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
+      unsubscribe = onAuthStateChanged(auth, (currentUser) => {//onAuthStateChanged is a firebase function that listens to the auth state changes
+        setUser(currentUser);// update the user state with the current user status from firebase
         setAuthReady(true);
-        if (currentUser) {
+        if (currentUser) { // If user is signed in it creates or updates the user profile in Firestore
           // Ensure user profile exists for DM purposes
           const userRef = doc(db, 'artifacts', "default-app-id", 'public', 'data', 'users', currentUser.uid);
           setDoc(userRef, { 
@@ -37,18 +42,19 @@ const useAuth = () => {
     
     signIn();
     
-    return () => unsubscribe && unsubscribe();
-  }, []);
+    return () => unsubscribe && unsubscribe();  //function that returns jsx .. // this is a cleanup function that runs when the component unmounts
+  }, []);   
 
   return { user, authReady };
-};
+}; // java script can be written in the jsx using curly braces
 
-const App = () => {
-  const { user, authReady } = useAuth();
-  const [darkMode, setDarkMode] = useState(false);
+const App = () => {    // Main App component
+  const { user, authReady } = useAuth(); // Custom hook to manage authentication state
+  const [darkMode, setDarkMode] = useState(false); // State for dark mode
+
 
   // Theme initialization from localStorage
-  useEffect(() => {
+  useEffect(() => {  // Check localStorage for dark mode preference
     const isDarkMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(isDarkMode);
     if (isDarkMode) {
@@ -69,21 +75,21 @@ const App = () => {
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = () => {  // Sign out handler
     signOut(auth);
   };
 
-  if (!authReady) {
+  if (!authReady) {  // Show loading state until auth is ready
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white font-mono">
-        <p className="text-xl text-yellow-400">LOADING_ACCESS_PROTOCOL...</p>
+        <p className="text-xl text-yellow-400">LOADING...PLEASE WAIT...</p>
       </div>
     );
   }
 
   return (
-    // Global container: Set dark background for full screen
-    <div className="app-container">
+    // Global container: Set dark background for full screen//  we use className instead of class since class is a reserve word
+    <div className="app-container">  
       <div className="container-layout">
         
         {/* Header: Styled to look sharp and futuristic */}

@@ -10,7 +10,7 @@ const MessageInput = ({ message, setMessage, sendMessage, disabled, darkMode }) 
     }
   };
   
-  const placeholderText = disabled ? 'Select a user to initiate private comms...' : 'Input command >';
+  const placeholderText = disabled ? 'Select a user to initiate private comms...' : 'message';
 
   return (
     <div className="input-area">

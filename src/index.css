@@ -1,9 +1,24 @@
+
 :root {
+    /* Light theme (default) */
+    --bg-dark: #F3F4F6;      
+    --bg-medium: #FFFFFF;    
+    --primary: #4F46E5;      
+    --accent: #F59E0B;     
+    --secondary-accent: #10B981; 
+    --border-color: #E6E9FF; 
+    --text-light: #1F2937;   
+    --text-dark: #111827;
+    --error: #DC2626;        
+}
+
+/* Dark theme overrides (applied when <html class="dark"> is present) */
+.dark {
     --bg-dark: #0D0D10;
     --bg-medium: #1A1A22;
-    --primary: #6366F1; /* Indigo */
-    --accent: #FACC15;  /* Yellow */
-    --secondary-accent: #34D399; /* Green for active status */
+    --primary: #6366F1; 
+    --accent: #FACC15;  
+    --secondary-accent: #34D399; 
     --border-color: #4338CA;
     --text-light: #E5E7EB;
     --text-dark: #1F2937;
